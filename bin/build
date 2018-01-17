@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+
+set -eux -o pipefail
+
+readonly DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )"/.. && pwd )"
+readonly PY_VERSION=$(python --version 2>&1)
+
+cd "$DIR"
+
+if [[ $PY_VERSION != *3\.6* ]]; then
+    echo "Please use Python 3.6 to deploy this application"
+    exit 1
+fi
+
+if [[ ! -d "$DIR/src/venv" ]]; then
+    echo "Cannot find virtualenv folder, creating Python virtual environment"
+    virtualenv src/venv
+    # Disable unbound variable checking for virtualenv init
+    set +u
+    # shellcheck disable=SC1091
+    source src/venv/bin/activate
+    set -u
+    pip install -r src/lambda-requirements.txt
+fi
+
+# Builds Lambda code bundle
+rm src/bundle.zip || true
+zip -j9 src/bundle.zip src/*.py
+
+pushd src/venv/lib/python3.6/site-packages
+zip -r9 ../../../../bundle.zip -- *
+popd
