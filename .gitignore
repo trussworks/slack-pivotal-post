@@ -1,5 +1,7 @@
 bundle.zip
 pip-selfcheck.json
+.cache
+**/__pycache__/*
 
 venv/
 

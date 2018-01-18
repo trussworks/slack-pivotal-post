@@ -8,8 +8,6 @@ from urllib.parse import parse_qs
 import boto3
 import requests
 
-sdb_client = boto3.client("sdb")
-
 deployed_slack_token = os.environ["slack_token"]
 pivotal_token = os.environ["pivotal_token"]
 sdb_domain = os.environ["sdb_domain"]
@@ -90,6 +88,10 @@ def response(code, message):
     }
 
 
+def get_sdb_client():
+    return boto3.client("sdb")
+
+
 class SlackRequest():
     """Class that encapsulates an incoming Slack request.
 
@@ -132,6 +134,7 @@ class SlackRequest():
 
 def get_channel_pairing(channel):
     """Retrieves Piotal Tracker project ID from SDB, or returns None"""
+    sdb_client = get_sdb_client()
     project_attr = sdb_client.get_attributes(
         DomainName=sdb_domain,
         ItemName=channel,
@@ -173,6 +176,7 @@ def store_pairing(channel, project_id):
     """Stores pairing as attribute on SDB."""
     logger.info("Storing pairing between {} and {}".format(
         channel, project_id))
+    sdb_client = get_sdb_client()
     sdb_client.put_attributes(
         DomainName=sdb_domain,
         ItemName=channel,
@@ -187,6 +191,7 @@ def remove_pairing(channel, project_name):
     """Deletes pairing from SDB."""
     logger.info("Removing pairing between {} and {}".format(
         channel, project_name))
+    sdb_client = get_sdb_client()
     sdb_client.delete_attributes(
         DomainName=sdb_domain,
         ItemName=channel)

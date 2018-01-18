@@ -4,6 +4,9 @@ build:
 deps:
 	pip install -r requirements.txt
 
+test:
+	pytest
+
 plan:
 	cd terraform && \
 	terraform plan
