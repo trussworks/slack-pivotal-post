@@ -1,8 +1,11 @@
+defaults: &defaults
+  docker:
+    - image: circleci/python:3.6.4
+
 version: 2
 jobs:
-  test:
-    docker:
-      - image: circleci/python:3.6.4
+  deps:
+    <<: *defaults
     steps:
       - checkout
 
@@ -25,18 +28,73 @@ jobs:
             - ./venv
           key: v1-dependencies-{{ checksum "requirements.txt" }}
 
+  test:
+    <<: *defaults
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+          - v1-dependencies-{{ checksum "requirements.txt" }}
+          - v1-dependencies-
+
       - run:
           name: run tests
           command: |
             source venv/bin/activate
             make test
 
-      - store_artifacts:
-          path: test-reports
-          destination: test-reports
+  build:
+    <<: *defaults
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+          - v1-dependencies-{{ checksum "requirements.txt" }}
+          - v1-dependencies-
+
+      - run:
+          name: build code archive
+          command: |
+            source venv/bin/activate
+            make build
+
+      - persist_to_workspace:
+          root: src
+          paths:
+            - bundle.zip
+
+  deploy:
+    <<: *defaults
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp
+
+      # Install AWS CLI
+      - run: sudo pip install -q awscli --upgrade
+
+      - run:
+          name: copy build to s3
+          command: |
+            aws s3 cp /tmp/bundle.zip s3://slack-pivotal-tracker-bot/releases/slack-pivotal-tracker-bot-latest.zip
 
 workflows:
   version: 2
   pipeline:
     jobs:
-      - test
+      - deps
+      - test:
+          requires:
+            - deps
+      - build:
+          requires:
+            - deps
+            - test
+      - deploy:
+          requires:
+            - build
+          filters:
+            branches:
+              only: master
