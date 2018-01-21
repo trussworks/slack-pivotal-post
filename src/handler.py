@@ -40,11 +40,12 @@ TUTORIAL_RESPONSE = (
 
 MISSING_PAIR_RESPONSE = (
     "Pivotal integration hasn't been set up in this channel yet.\n"
-    "Invite *trussbot@truss.works* to your project and pair it with `{command} pair <Pivotal project URL>`\n")
+    "Invite the user tied to this bot's API key to your project and\n"
+    "pair it with `{command} pair <Pivotal project URL>`\n")
 
 MISSING_PROJECT_ACCESS_RESPONSE = (
-    "It looks like TrussBot doesn't have access to this Pivotal project yet.\n"
-    "Invite *trussbot@truss.works* to your Pivotal project and try pairing again.\n")
+    "It looks like slack-pivotal-tracker-bot doesn't have access to this Pivotal project yet.\n"
+    "Invite the user tied to this bot's API key to your Pivotal project and try pairing again.\n")
 
 SUCCESSFUL_PAIR_RESPONSE = (
     "Success! You've paired *#{channel}* with *{project_name}*.\n"
