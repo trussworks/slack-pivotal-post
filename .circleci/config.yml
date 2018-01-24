@@ -80,21 +80,53 @@ jobs:
           command: |
             aws s3 cp /tmp/bundle.zip s3://slack-pivotal-tracker-bot/releases/slack-pivotal-tracker-bot-latest.zip
 
+  deploy_version_tag:
+    <<: *defaults
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp
+
+      # Install AWS CLI
+      - run: sudo pip install -q awscli --upgrade
+
+      - run:
+          name: copy tagged build to s3
+          command: |
+            aws s3 cp /tmp/bundle.zip s3://slack-pivotal-tracker-bot/releases/slack-pivotal-tracker-bot-${CIRCLE_TAG}.zip
+
 workflows:
   version: 2
   pipeline:
     jobs:
-      - deps
+      - deps:
+          filters:
+            tags:
+              only: /.*/
       - test:
           requires:
             - deps
+          filters:
+            tags:
+              only: /.*/
       - build:
           requires:
             - deps
             - test
+          filters:
+            tags:
+              only: /.*/
       - deploy:
           requires:
             - build
           filters:
             branches:
               only: master
+      - deploy_version_tag:
+          requires:
+            - build
+          filters:
+            tags:
+              only: /v[0-9]+(\.[0-9]+)*(-.+)?/
+            branches:
+              ignore: /.*/
