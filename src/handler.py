@@ -28,15 +28,23 @@ logger.setLevel(logging.INFO)
 PAIR_PHRASE = "pair"
 UNPAIR_PHRASE = "unpair"
 HELP_PHRASE = "help"
+EXPORT_PHRASE = "view_pairings"
 
 KNOWN_PHRASES = (
     PAIR_PHRASE,
     UNPAIR_PHRASE,
-    HELP_PHRASE)
+    HELP_PHRASE,
+    EXPORT_PHRASE)
 
 TUTORIAL_RESPONSE = (
     "Specify a story name. Optional: add a description after a semicolon.\n"
     "e.g. `{command} Buy more ethernet cables; We are running out`\n")
+
+EXPORT_PAIRINGS_RESPONSE = (
+    "Here are the currently paired channels:\n"
+    "```\n"
+    "{pairing_json}\n"
+    "```")
 
 MISSING_PAIR_RESPONSE = (
     "Pivotal integration hasn't been set up in this channel yet.\n"
@@ -215,6 +223,17 @@ def post_new_tracker_story(message, project_id, user):
     return name, story_url
 
 
+def export_pairings():
+    """Fetches all pairings from SimpleDB."""
+    sdb_client = get_sdb_client()
+    response = sdb_client.select(
+        SelectExpression="select * from `{}`".format(sdb_domain))
+    pair_dict = {
+        item["Name"]: item["Attributes"][0]["Value"] for item in response["Items"]}
+
+    return pair_dict
+
+
 def lambda_handler(event, context):
     """Entrypoint for Lambda function. Contains core logic."""
     # TODO(Patrick): break up this function
@@ -264,6 +283,12 @@ def lambda_handler(event, context):
         return response(200, SUCCESSFUL_UNPAIR_RESPONSE.format(
             project_name=project_name,
             channel=parsed_request.channel))
+
+    # User wants to view the list of paired channels
+    if parsed_request.action_phrase == EXPORT_PHRASE:
+        pairing_dict = export_pairings()
+        return response(200, EXPORT_PAIRINGS_RESPONSE.format(
+            pairing_json=json.dumps(pairing_dict, sort_keys=True, indent=2)))
 
     # If no other actions were taken then we're posting a new Tracker story
     project_name = get_project_name(paired_tracker_project)
