@@ -110,7 +110,7 @@ class SlackRequest():
 
     def __init__(self, event):
         params = parse_qs(event["body"])
-        # logger.info(params)
+        logger.info(params)
         self.command = params["trigger_word"][0]
         self.text = params["text"][0]
         self.token = params["token"][0]
