@@ -116,7 +116,7 @@ class SlackRequest():
         action_body: Remaining action body if action phrase is detected
     """
 
-    def __init__(self, event):
+    def __init__(self, event, known_phrases):
         params = parse_qs(event["body"])
         logger.info(params)
         self.command = params["trigger_word"][0]
@@ -132,9 +132,8 @@ class SlackRequest():
 
         # "Action phrase" is assumed to be the first word provided
         msg_words = self.parsed_msg.split()
-        action_phrase = msg_words[0]
-        if action_phrase in KNOWN_PHRASES:
-            self.action_phrase = action_phrase
+        if len(msg_words) and msg_words[0] in known_phrases:
+            self.action_phrase = msg_words[0]
             self.action_body = " ".join(msg_words[1:])
         else:
             self.action_phrase = None
@@ -237,7 +236,7 @@ def export_pairings():
 def lambda_handler(event, context):
     """Entrypoint for Lambda function. Contains core logic."""
     # TODO(Patrick): break up this function
-    parsed_request = SlackRequest(event)
+    parsed_request = SlackRequest(event, KNOWN_PHRASES)
     paired_tracker_project = get_channel_pairing(parsed_request.channel)
 
     # Just a basic sanity check that we're talking to the Slack app we want to
