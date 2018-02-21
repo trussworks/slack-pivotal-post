@@ -78,7 +78,7 @@ jobs:
       - run:
           name: copy build to s3
           command: |
-            aws s3 cp /tmp/bundle.zip s3://slack-pivotal-tracker-bot/releases/slack-pivotal-tracker-bot-latest.zip
+            aws s3 cp /tmp/bundle.zip s3://slack-pivotal-tracker-bot/releases/slack-pivotal-tracker-bot-latest.zip --acl public-read
 
   deploy_version_tag:
     <<: *defaults
@@ -93,7 +93,7 @@ jobs:
       - run:
           name: copy tagged build to s3
           command: |
-            aws s3 cp /tmp/bundle.zip s3://slack-pivotal-tracker-bot/releases/slack-pivotal-tracker-bot-${CIRCLE_TAG}.zip
+            aws s3 cp /tmp/bundle.zip s3://slack-pivotal-tracker-bot/releases/slack-pivotal-tracker-bot-${CIRCLE_TAG}.zip --acl public-read
 
 workflows:
   version: 2
