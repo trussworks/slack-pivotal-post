@@ -110,7 +110,7 @@ class SlashCommandRequest():
         command: A string representing the command key word. (e.g. "/pivotal")
         text: The raw text contents of the incoming message.
         token: Slack API token of the incoming message.
-        user: Global user ID of user who posted the Slack message.
+        user: Name of user who posted the Slack message.
         channel_id: Global ID of Slack channel where message was posted in.
         action_phrase: Key command phrase used to instruct what action to take.
         action_body: Remaining action body if action phrase is detected
@@ -122,7 +122,7 @@ class SlashCommandRequest():
         self.command = params["command"][0]
         self.text = params.get("text", [""])[0]
         self.token = params["token"][0]
-        self.user = params["user_id"][0]
+        self.user = params["user_name"][0]
         self.channel_id = params["channel_id"][0]
         self.channel_name = params["channel_name"][0]
 
