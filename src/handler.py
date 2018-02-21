@@ -30,6 +30,8 @@ UNPAIR_PHRASE = "unpair"
 HELP_PHRASE = "help"
 EXPORT_PHRASE = "view_pairings"
 
+PRIVATE_CHANNEL_NAME = "privategroup"
+
 KNOWN_PHRASES = (
     PAIR_PHRASE,
     UNPAIR_PHRASE,
@@ -56,12 +58,12 @@ MISSING_PROJECT_ACCESS_RESPONSE = (
     "Invite the user tied to this bot's API key to your Pivotal project and try pairing again.\n")
 
 SUCCESSFUL_PAIR_RESPONSE = (
-    "Success! You've paired *#{channel}* with *{project_name}*.\n"
+    "Success! You've paired {channel} with *{project_name}*.\n"
     "For more info about how to post a story type `{command} help`\n"
     "Unpair this channel from *{project_name}* with `{command} unpair`\n")
 
 SUCCESSFUL_UNPAIR_RESPONSE = (
-    "Successfully removed pairing between *#{channel}* and *{project_name}*.\n")
+    "Successfully removed pairing between {channel} and *{project_name}*.\n")
 
 SUCCESSFUL_POST_RESPONSE = (
     "Story *{story}* added to *{project}*.\n"
@@ -101,17 +103,15 @@ def get_sdb_client():
     return boto3.client("sdb")
 
 
-class SlackRequest():
-    """Class that encapsulates an incoming Slack request.
+class SlashCommandRequest():
+    """Class that encapsulates an Slack Slash Command request.
 
     Attributes:
-        command: A string representing the command key word. (e.g. "!pivotal")
+        command: A string representing the command key word. (e.g. "/pivotal")
         text: The raw text contents of the incoming message.
         token: Slack API token of the incoming message.
-        user: Username of user who posted the Slack message.
-        channel: Name of Slack channel where message was posted in.
-        parsed_msg: Raw message test minus command word.
-        project_id: ID of Pivotal project that Slack channel is bound to.
+        user: Global user ID of user who posted the Slack message.
+        channel_id: Global ID of Slack channel where message was posted in.
         action_phrase: Key command phrase used to instruct what action to take.
         action_body: Remaining action body if action phrase is detected
     """
@@ -119,19 +119,24 @@ class SlackRequest():
     def __init__(self, event, known_phrases):
         params = parse_qs(event["body"])
         logger.info(params)
-        self.command = params["trigger_word"][0]
-        self.text = params["text"][0]
+        self.command = params["command"][0]
+        self.text = params.get("text", [""])[0]
         self.token = params["token"][0]
-        self.user = params["user_name"][0]
-        self.channel = params["channel_name"][0]
+        self.user = params["user_id"][0]
+        self.channel_id = params["channel_id"][0]
+        self.channel_name = params["channel_name"][0]
 
-        # Incoming message will always be prepended with command word, so
-        # strip it out and parse escaped characters
-        msg_contents = self.text.replace(self.command, "", 1)
-        self.parsed_msg = html.unescape(msg_contents).strip()
+        self.text = html.unescape(self.text).strip()
+
+        # We don't get reverse translation of channel IDs for private groups,
+        # so sub in some generic text
+        if self.channel_name == PRIVATE_CHANNEL_NAME:
+            self.formatted_channel = "this channel"
+        else:
+            self.formatted_channel = "*<#{}>*".format(self.channel_id)
 
         # "Action phrase" is assumed to be the first word provided
-        msg_words = self.parsed_msg.split()
+        msg_words = self.text.split()
         if len(msg_words) and msg_words[0] in known_phrases:
             self.action_phrase = msg_words[0]
             self.action_body = " ".join(msg_words[1:])
@@ -167,10 +172,8 @@ def get_project_name(project_id):
             return project_info["name"]
 
 
-def pair_channel(channel, action_body):
-    # Attempts to pair a channel to a given Pivotal Tracker project
-    logger.info(
-        "Attempting to pair channel {} to a Tracker project".format(channel))
+def get_pivotal_project_id(action_body):
+    # Attempts to extract a Pivotal Tracker project ID from a pair command
     valid_project_url = pivotal_project_pattern.search(action_body)
 
     if valid_project_url:
@@ -180,14 +183,14 @@ def pair_channel(channel, action_body):
         raise ChannelPairingException()
 
 
-def store_pairing(channel, project_id):
+def store_pairing(channel_id, project_id):
     """Stores pairing as attribute on SDB."""
     logger.info("Storing pairing between {} and {}".format(
-        channel, project_id))
+        channel_id, project_id))
     sdb_client = get_sdb_client()
     sdb_client.put_attributes(
         DomainName=sdb_domain,
-        ItemName=channel,
+        ItemName=channel_id,
         Attributes=[{
             "Name": "project_id",
             "Value": project_id,
@@ -195,14 +198,14 @@ def store_pairing(channel, project_id):
         }])
 
 
-def remove_pairing(channel, project_name):
+def remove_pairing(channel_id, project_name):
     """Deletes pairing from SDB."""
     logger.info("Removing pairing between {} and {}".format(
-        channel, project_name))
+        channel_id, project_name))
     sdb_client = get_sdb_client()
     sdb_client.delete_attributes(
         DomainName=sdb_domain,
-        ItemName=channel)
+        ItemName=channel_id)
 
 
 def post_new_tracker_story(message, project_id, user):
@@ -236,8 +239,8 @@ def export_pairings():
 def lambda_handler(event, context):
     """Entrypoint for Lambda function. Contains core logic."""
     # TODO(Patrick): break up this function
-    parsed_request = SlackRequest(event, KNOWN_PHRASES)
-    paired_tracker_project = get_channel_pairing(parsed_request.channel)
+    parsed_request = SlashCommandRequest(event, KNOWN_PHRASES)
+    paired_tracker_project = get_channel_pairing(parsed_request.channel_id)
 
     # Just a basic sanity check that we're talking to the Slack app we want to
     if parsed_request.token != deployed_slack_token:
@@ -250,13 +253,15 @@ def lambda_handler(event, context):
     if paired_tracker_project is None:
         if parsed_request.action_phrase == PAIR_PHRASE:
             try:
-                project_id = pair_channel(parsed_request.channel,
-                                          parsed_request.action_body)
-                store_pairing(parsed_request.channel, project_id)
+                logger.info(
+                  "Attempting to pair channel {} to a Tracker project".format(
+                    parsed_request.channel_id))
+                project_id = get_pivotal_project_id(parsed_request.action_body)
+                store_pairing(parsed_request.channel_id, project_id)
                 project_name = get_project_name(project_id)
                 return response(200, SUCCESSFUL_PAIR_RESPONSE.format(
                     project_name=project_name,
-                    channel=parsed_request.channel,
+                    channel=parsed_request.formatted_channel,
                     command=parsed_request.command))
             except PivotalProjectAccessException:
                 # Found a pair request, but missing access to project
@@ -271,17 +276,17 @@ def lambda_handler(event, context):
                 command=parsed_request.command))
 
     # Either there's no text or user asked for help, so provide help
-    if len(parsed_request.parsed_msg) == 0 or parsed_request.action_phrase == HELP_PHRASE:
+    if len(parsed_request.text) == 0 or parsed_request.action_phrase == HELP_PHRASE:
         return response(
             200, TUTORIAL_RESPONSE.format(command=parsed_request.command))
 
     # User wants to unpair their current channel from a Tracker project
     if parsed_request.action_phrase == UNPAIR_PHRASE:
         project_name = get_project_name(paired_tracker_project)
-        remove_pairing(parsed_request.channel, project_name)
+        remove_pairing(parsed_request.channel_id, project_name)
         return response(200, SUCCESSFUL_UNPAIR_RESPONSE.format(
             project_name=project_name,
-            channel=parsed_request.channel))
+            channel=parsed_request.formatted_channel))
 
     # User wants to view the list of paired channels
     if parsed_request.action_phrase == EXPORT_PHRASE:
@@ -292,7 +297,7 @@ def lambda_handler(event, context):
     # If no other actions were taken then we're posting a new Tracker story
     project_name = get_project_name(paired_tracker_project)
     story_name, story_url = post_new_tracker_story(
-        parsed_request.parsed_msg, paired_tracker_project, parsed_request.user)
+        parsed_request.text, paired_tracker_project, parsed_request.user)
     return response(200, SUCCESSFUL_POST_RESPONSE.format(
         story=story_name,
         project=project_name,

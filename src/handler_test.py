@@ -30,60 +30,63 @@ def test_response_returns_statuscode_and_message(handler):
     assert parsed_body["text"] == MESSAGE
 
 
-def test_SlackRequest_parses_params(handler):
-    # Given: A set of parameters sent from Slack webhook
+def test_SlashCommandRequest_parses_params(handler):
+    # Given: A set of parameters sent from Slack slash command
     body = {
-        "trigger_word": "trigger word",
+        "command": "/command",
         "text": "some text",
         "token": "some token",
-        "user_name": "some user",
-        "channel_name": "rage_cage",
+        "user_id": "some user",
+        "channel_id": "some_id",
+        "channel_name": "rage_cage"
     }
 
     # When: A query string of those params is parsed
-    request = handler.SlackRequest({"body": urlencode(body)}, [])
+    request = handler.SlashCommandRequest({"body": urlencode(body)}, [])
 
     # Then: The params are stored as properties
-    assert request.command == body["trigger_word"]
+    assert request.command == body["command"]
     assert request.text == body["text"]
     assert request.token == body["token"]
-    assert request.user == body["user_name"]
-    assert request.channel == body["channel_name"]
+    assert request.user == body["user_id"]
+    assert request.channel_id == body["channel_id"]
 
 
-def test_SlackRequest_parses_actions(handler, mocker):
-    # Given: A set of parameters sent from Slack webhook
+def test_SlashCommandRequest_parses_actions(handler, mocker):
+    # Given: A set of parameters sent from Slack slash command
     body = {
-        "trigger_word": "!word",
-        "text": "!word action body",
+        "command": "/command",
+        "text": "action body",
         "token": "some token",
-        "user_name": "some user",
-        "channel_name": "rage_cage",
+        "user_id": "some user",
+        "channel_id": "some_id",
+        "channel_name": "rage_cage"
     }
 
     # When: A query string of those params is parsed
-    request = handler.SlackRequest({"body": urlencode(body)}, ["action"])
+    request = handler.SlashCommandRequest({"body": urlencode(body)}, ["action"])
 
     # Then: The params are stored as properties
-    assert request.parsed_msg == "action body"
+    assert request.text == "action body"
     assert request.action_phrase == "action"
     assert request.action_body == "body"
 
 
-def test_SlackRequest_handles_no_text(handler, mocker):
-    # Given: A set of parameters sent from Slack webhook
+def test_SlashCommandRequest_handles_no_text(handler, mocker):
+    # Given: A set of parameters sent from Slack slash command
     body = {
-        "trigger_word": "!word",
-        "text": "!word",
+        "command": "/command",
         "token": "some token",
-        "user_name": "some user",
-        "channel_name": "rage_cage",
+        "user_id": "some user",
+        "channel_id": "some_id",
+        "channel_name": "rage_cage"
     }
 
     # When: A query string of those params is parsed
-    request = handler.SlackRequest({"body": urlencode(body)}, ["action"])
+    print(urlencode(body))
+    request = handler.SlashCommandRequest({"body": urlencode(body)}, ["action"])
 
     # Then: The params are stored as properties
-    assert request.parsed_msg == ""
+    assert request.text == ""
     assert request.action_phrase is None
     assert request.action_body is None

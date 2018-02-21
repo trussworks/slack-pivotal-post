@@ -8,14 +8,14 @@ You can deploy this bot using the accompanying public [Terraform module](https:/
 
 ## Usage
 
-After you've deployed this bot with your chosen webhook keyphrase (say, `!pivotal`), there's only one more step to start posting stories:
+After you've deployed this bot as a [slash command](https://api.slack.com/slash-commands), there's only one more step to start posting stories:
 
 ### Pair
 
 Internally this bot maintains a mapping of Slack channels to Pivotal Tracker projects, so to start you'll need to set up your first pairing. Be sure to use the full Tracker project URL and not just the project ID:
 
 <!-- markdownlint-disable MD034 -->
-> !pivotal pair https://www.pivotaltracker.com/n/projects/1234567
+> /pivotal pair https://www.pivotaltracker.com/n/projects/1234567
 
 <!-- markdownlint-enable MD034 -->
 
@@ -24,9 +24,9 @@ Internally this bot maintains a mapping of Slack channels to Pivotal Tracker pro
 Now you're ready to start posting stories! Any text after your keyphrase will become the title of your story, and optionally you can specify the story description with a semicolon:
 
 <!-- markdownlint-disable MD028 -->
-> !pivotal Make a user feedback page
+> /pivotal Make a user feedback page
 
-> !pivotal Make a user feedback page; Use /feedback route and add name/address to the form
+> /pivotal Make a user feedback page; Use /feedback route and add name/address to the form
 
 <!-- markdownlint-disable MD028 -->
 
@@ -34,13 +34,13 @@ Now you're ready to start posting stories! Any text after your keyphrase will be
 
 Maybe you're done with a project, or you just want to change Tracker projects. Use `unpair` for that:
 
-> !pivotal unpair
+> /pivotal unpair
 
 ### Help
 
 And if you ever forget how to use this bot, just ask for help:
 
-> !pivotal help
+> /pivotal help
 
 ## Development
 
