@@ -37,6 +37,7 @@ def test_SlashCommandRequest_parses_params(handler):
         "text": "some text",
         "token": "some token",
         "user_name": "some user",
+        "user_id": "some user id",
         "channel_id": "some_id",
         "channel_name": "rage_cage"
     }
@@ -49,6 +50,7 @@ def test_SlashCommandRequest_parses_params(handler):
     assert request.text == body["text"]
     assert request.token == body["token"]
     assert request.user == body["user_name"]
+    assert request.user_id == body["user_id"]
     assert request.channel_id == body["channel_id"]
 
 
@@ -59,6 +61,7 @@ def test_SlashCommandRequest_parses_actions(handler, mocker):
         "text": "action body",
         "token": "some token",
         "user_name": "some user",
+        "user_id": "some user id",
         "channel_id": "some_id",
         "channel_name": "rage_cage"
     }
@@ -78,6 +81,7 @@ def test_SlashCommandRequest_handles_no_text(handler, mocker):
         "command": "/command",
         "token": "some token",
         "user_name": "some user",
+        "user_id": "some user id",
         "channel_id": "some_id",
         "channel_name": "rage_cage"
     }
