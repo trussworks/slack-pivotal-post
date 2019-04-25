@@ -161,15 +161,15 @@ def get_channel_pairing(channel):
 
 
 def get_project_name(project_id):
-        """Returns a JSON response object describing a Pivotal project"""
-        logger.info("Querying Pivotal project info")
-        project_info = requests.get(pivotal_url + "/projects/" + project_id,
-                                    headers=pivotal_headers).json()
+    """Returns a JSON response object describing a Pivotal project"""
+    logger.info("Querying Pivotal project info")
+    project_info = requests.get(pivotal_url + "/projects/" + project_id,
+                                headers=pivotal_headers).json()
 
-        if project_info.get("code") in pivotal_error_codes:
-            raise PivotalProjectAccessException()
-        else:
-            return project_info["name"]
+    if project_info.get("code") in pivotal_error_codes:
+        raise PivotalProjectAccessException()
+    else:
+        return project_info["name"]
 
 
 def get_pivotal_project_id(action_body):
