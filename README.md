@@ -1,3 +1,6 @@
+# DEPRECATION NOTICE
+This project is no longer being maintained.
+
 # slack-pivotal-tracker-bot [![CircleCI Status](https://circleci.com/gh/trussworks/slack-pivotal-tracker-bot.svg?style=shield&circle-token=:circle-token)](https://circleci.com/gh/trussworks/slack-pivotal-tracker-bot)
 
 Post new Pivotal Tracker stories directly from Slack
